@@ -92,6 +92,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 class OkHandler(webapp2.RequestHandler):
 
 	def get(self):
+		self.response.content_type = 'text/plain'
 		self.response.write('ok')
 
 	head = get
