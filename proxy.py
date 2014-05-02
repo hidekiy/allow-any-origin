@@ -10,7 +10,7 @@ from google.appengine.runtime import apiproxy_errors
 class HttpProxyHandler(webapp2.RequestHandler):
 
 	internal_quota_reset_interval = 60 * 61
-	internal_quota_request_threshold = 150
+	internal_quota_request_threshold = 500
 	internal_quota_dict = dict()
 	internal_quota_reset_at = time()
 
