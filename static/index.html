@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>allow-any-origin.appspot.com</title>
+<style>
+body { font-family: Verdana, sans-serif }
+h1, h2 { font-weight: normal }
+h1 { margin: 1.5em 0 }
+h2 { margin: 1.4em 0 0.8em }
+p, form { margin: 1em }
+a img { border: 0 }
+</style>
+</head>
+<body>
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-M3CDR6"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-M3CDR6');</script>
+<!-- End Google Tag Manager -->
+
+<h1>allow-any-origin.appspot.com</h1>
+<h2>What is this?</h2>
+<p>Adds "Access-Control-Allow-Origin: *" in the response header to everywhere.</p>
+<h2>How To Use</h2>
+<p>Please get these urls via XMLHttpRequest (level 2)</p>
+<p>Available browsers: Firefox 3.5+, Chrome 3+, and Safari 4+<br>
+(Note: IE 8+ has XDomainRequest instead of XMLHttpRequest)</p>
+<p>Request examples:<br>
+http://allow-any-origin.appspot.com/http://news.google.com/news?ned=us&amp;topic=h&amp;output=rss<br>
+<h2>Restrictions</h2>
+<p>You can only request by GET method. Other methods like POST aren't implemented.</p>
+<p>Response body size is up to 1MB.</p>
+<p>Response timeout is around 30 seconds.</p>
+<h2>Live Demo</h2>
+<form action="?" onsubmit="xhrdemo.call(this); return false">
+<input type="text" value="http://www.google.com/" size="50" /><input type="submit" value="get" />
+</form>
+<h2>Link</h2>
+<p><a href="http://blog.hidekiy.com/2010/10/xhr-xhr-lv2proxy.html">hidekiy blog: XMLHttpRequest Level 2 時代のクロスドメインリクエスト Proxy</a></p>
+<h2>Author</h2>
+<p><a href="http://hidekiy.com/" rel="me">Hideki Yamamura (@hidekiy)</a></p>
+<p style="text-align:right"><a href="https://developers.google.com/appengine/"><img src="https://developers.google.com/appengine/images/appengine-noborder-120x30.gif" width="120" height="30" alt="powered by Google App Engine" /></a></p>
+<script>
+function xhrdemo() {
+	var url = this.getElementsByTagName('input')[0].value,
+		req = window.XDomainRequest ? new XDomainRequest() : new XMLHttpRequest();
+
+	req.open('GET', 'http://demo.allow-any-origin.appspot.com/' + url, true);
+	req.onload = function () {
+		alert(req.responseText);
+		req = null;
+	}
+	req.send(null);
+}
+</script>
+</body>
+</html>
