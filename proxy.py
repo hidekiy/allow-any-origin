@@ -78,7 +78,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			else:
 				self.response.set_status(res.status_code)
 
-			self.response.out.write(res.content)
+			self.response.write(res.content)
 
 		else:
 			logging.warning('urlfetch error: %s', errorReason)
@@ -92,7 +92,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 class OkHandler(webapp2.RequestHandler):
 
 	def get(self):
-		self.response.out.write('ok')
+		self.response.write('ok')
 
 	head = get
 
