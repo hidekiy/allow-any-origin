@@ -44,7 +44,8 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 		origin = self.request.headers.get('origin', '').lower();
 		logging.debug('origin %s', origin)
-		self._check_internal_quota(origin)
+		if origin != '':
+			self._check_internal_quota(origin)
 
 		res, errorReason = None, None
 		try:
