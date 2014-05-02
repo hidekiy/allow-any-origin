@@ -85,7 +85,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 			self.abort(
 				code=403,
-				detail='urlfetch: %s' % errorReason,
+				detail='urlfetch error: %s' % errorReason,
 				headers={'Access-Control-Allow-Origin': '*'},
 			)
 
