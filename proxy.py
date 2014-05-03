@@ -63,12 +63,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 				self.response.headers[key] = val
 
 			self.response.headers['Access-Control-Allow-Origin'] = '*'
-
-			try:
-				del self.response.headers['Set-Cookie']
-
-			except KeyError:
-				pass
+			self.response.headers.pop('Set-Cookie', None)
 
 			if res.status_code >= 500:
 				logging.info('override response code %d', res.status_code)
