@@ -14,8 +14,8 @@ class Quota(ndb.Model):
 
 class HttpProxyHandler(webapp2.RequestHandler):
 	quota_reset_interval = 60 * 61
-	quota_dict = dict()
-	quota_reset_at = time()
+	quota_dict = None
+	quota_reset_at = 0
 	quota_count_threshold = sys.maxint
 	quota_limits_refreshed_at = 0
 	quota_limits_refresh_interval = 60
