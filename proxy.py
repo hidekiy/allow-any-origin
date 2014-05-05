@@ -1,32 +1,50 @@
 #coding=utf-8
 import logging
 import re
+import sys
 from time import time
 import hashlib
 import webapp2
 from google.appengine.api import urlfetch
+from google.appengine.ext import ndb
 from google.appengine.runtime import apiproxy_errors
 
-class HttpProxyHandler(webapp2.RequestHandler):
+class Quota(ndb.Model):
+	count = ndb.IntegerProperty()
 
-	internal_quota_reset_interval = 60 * 61
-	internal_quota_request_threshold = 500
-	internal_quota_dict = dict()
-	internal_quota_reset_at = time()
+class HttpProxyHandler(webapp2.RequestHandler):
+	quota_reset_interval = 60 * 61
+	quota_dict = dict()
+	quota_reset_at = time()
+	quota_count_threshold = sys.maxint
+	quota_limits_refreshed_at = 0
+	quota_limits_refresh_interval = 60
 
 	@classmethod
-	def _prepare_internal_quota(cls):
-		if time() - cls.internal_quota_reset_at > cls.internal_quota_reset_interval:
-			cls.internal_quota_dict = dict()
-			cls.internal_quota_reset_at = time()
+	def _prepare_quota(cls):
+		if time() - cls.quota_reset_at > cls.quota_reset_interval:
+			logging.info('reset quota_dict')
+			cls.quota_dict = dict()
+			cls.quota_reset_at = time()
 
-	def _check_internal_quota(self, key):
+	@classmethod
+	def _update_quota_limits(cls):
+		if time() - cls.quota_limits_refreshed_at > cls.quota_limits_refresh_interval:
+			cls.quota_limits_refreshed_at = time()
+			quota = Quota.get_by_id('global');
+
+			if quota:
+				quota_count = quota.count
+				logging.info('_update_quota_limits count=%d', quota_count)
+				cls.quota_count_threshold = quota_count
+
+	def _check_quota(self, key):
 		key_hash = hashlib.sha1(key).digest()
-		quota_count = self.internal_quota_dict.get(key_hash, 0) + 1
-		self.internal_quota_dict[key_hash] = quota_count
-		logging.info('quota_count %s %d', key, quota_count)
+		quota_count = self.quota_dict.get(key_hash, 0) + 1
+		self.quota_dict[key_hash] = quota_count
+		logging.info('quota_count %d', quota_count)
 
-		if (quota_count > self.internal_quota_request_threshold):
+		if (quota_count > self.quota_count_threshold):
 			logging.warning('over internal quota')
 			self.abort(
 				code=403,
@@ -35,7 +53,8 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			)
 
 	def get(self, url):
-		self._prepare_internal_quota()
+		self._prepare_quota()
+		self._update_quota_limits()
 
 		if self.request.query_string:
 			url += '?' + self.request.query_string
@@ -45,7 +64,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		origin = self.request.headers.get('origin', '').lower();
 		logging.debug('origin %s', origin)
 		if origin:
-			self._check_internal_quota(origin)
+			self._check_quota(origin)
 
 		res, errorReason = None, None
 		try:
@@ -92,6 +111,7 @@ class OkHandler(webapp2.RequestHandler):
 
 	head = get
 
+Quota.get_or_insert('global', count=1000)
 application = webapp2.WSGIApplication([
 	(r'/(https?://.*)', HttpProxyHandler),
 	(r'/ok', OkHandler),
