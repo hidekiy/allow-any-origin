@@ -11,14 +11,16 @@ from google.appengine.runtime import apiproxy_errors
 
 class Quota(ndb.Model):
 	count = ndb.IntegerProperty()
+	reset_interval = ndb.IntegerProperty()
 
 class HttpProxyHandler(webapp2.RequestHandler):
-	quota_reset_interval = 60 * 61
 	quota_dict = None
 	quota_reset_at = 0
-	quota_count_threshold = sys.maxint
 	quota_limits_refreshed_at = 0
 	quota_limits_refresh_interval = 60
+	quota_reset_interval = 0
+	quota_count_threshold = sys.maxint
+	quota_datastore_id = 'default'
 
 	@classmethod
 	def _prepare_quota(cls):
@@ -31,12 +33,14 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	def _update_quota_limits(cls):
 		if time() - cls.quota_limits_refreshed_at > cls.quota_limits_refresh_interval:
 			cls.quota_limits_refreshed_at = time()
-			quota = Quota.get_by_id('global');
+			quota = Quota.get_by_id(cls.quota_datastore_id);
 
 			if quota:
 				quota_count = quota.count
-				logging.info('_update_quota_limits count=%d', quota_count)
+				quota_reset_interval = quota.reset_interval
+				logging.info('_update_quota_limits count=%d, reset_interval=%d', quota_count, quota_reset_interval)
 				cls.quota_count_threshold = quota_count
+				cls.quota_reset_interval = quota_reset_interval
 
 	def _check_quota(self, key):
 		key_hash = hashlib.sha1(key).digest()
@@ -104,14 +108,15 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			)
 
 class OkHandler(webapp2.RequestHandler):
-
 	def get(self):
 		self.response.content_type = 'text/plain'
 		self.response.write('ok')
 
 	head = get
 
-Quota.get_or_insert('global', count=1000)
+Quota.get_or_insert(HttpProxyHandler.quota_datastore_id,
+	count=1000, reset_interval=60 * 60 * 2)
+
 application = webapp2.WSGIApplication([
 	(r'/(https?://.*)', HttpProxyHandler),
 	(r'/ok', OkHandler),
