@@ -64,6 +64,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			url += '?' + self.request.query_string
 
 		logging.debug('url %s', url)
+		logging.debug('referrer %s', self.request.headers.get('referer', ''))
 
 		origin = self.request.headers.get('origin', '').lower();
 		logging.debug('origin %s', origin)
