@@ -2,8 +2,9 @@
 import logging
 import re
 import sys
-from time import time
 import hashlib
+from time import time
+
 import webapp2
 from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
@@ -46,7 +47,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		key_hash = hashlib.sha1(key).digest()
 		quota_count = self.quota_dict.get(key_hash, 0) + 1
 		self.quota_dict[key_hash] = quota_count
-		logging.info('quota_count %d', quota_count)
+		logging.info('_check_quota: quota_count %d', quota_count)
 
 		if (quota_count > self.quota_count_threshold):
 			logging.warning('over internal quota')
@@ -68,8 +69,17 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 		origin = self.request.headers.get('origin', '').lower();
 		logging.debug('origin %s', origin)
-		if origin:
-			self._check_quota(origin)
+
+		if not origin:
+			logging.warning('missing origin')
+			self.abort(
+				code=403,
+				detail='Origin header is required',
+				headers={'Access-Control-Allow-Origin': '*'},
+			)
+			return
+
+		self._check_quota(origin)
 
 		res, errorReason = None, None
 		try:
