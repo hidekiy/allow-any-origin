@@ -13,6 +13,7 @@ from google.appengine.runtime import apiproxy_errors
 class Quota(ndb.Model):
 	count = ndb.IntegerProperty()
 	reset_interval = ndb.IntegerProperty()
+	default_id = 'default'
 
 class HttpProxyHandler(webapp2.RequestHandler):
 	quota_dict = None
@@ -21,7 +22,6 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	quota_limits_refresh_interval = 60
 	quota_reset_interval = 0
 	quota_count_threshold = sys.maxint
-	quota_datastore_id = 'default'
 
 	@classmethod
 	def _prepare_quota(cls):
@@ -34,7 +34,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	def _update_quota_limits(cls):
 		if time() - cls.quota_limits_refreshed_at > cls.quota_limits_refresh_interval:
 			cls.quota_limits_refreshed_at = time()
-			quota = Quota.get_by_id(cls.quota_datastore_id);
+			quota = Quota.get_by_id(Quota.default_id);
 
 			if quota:
 				quota_count = quota.count
@@ -120,12 +120,15 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 class OkHandler(webapp2.RequestHandler):
 	def get(self):
+		quota = Quota.get_by_id(Quota.default_id);
+		assert quota
+
 		self.response.content_type = 'text/plain'
 		self.response.write('ok')
 
 	head = get
 
-Quota.get_or_insert(HttpProxyHandler.quota_datastore_id,
+Quota.get_or_insert(Quota.default_id,
 	count=1000, reset_interval=60 * 60 * 2)
 
 application = webapp2.WSGIApplication([
