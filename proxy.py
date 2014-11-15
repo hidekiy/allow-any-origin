@@ -22,6 +22,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	quota_limits_refresh_interval = 60
 	quota_reset_interval = 0
 	quota_count_threshold = sys.maxint
+	cors_headers = {'Access-Control-Allow-Origin': '*'}
 
 	@classmethod
 	def _prepare_quota(cls):
@@ -54,7 +55,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			self.abort(
 				code=403,
 				detail='over internal quota',
-				headers={'Access-Control-Allow-Origin': '*'},
+				headers=self.cors_headers,
 			)
 
 	def get(self, url):
@@ -75,7 +76,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			self.abort(
 				code=403,
 				detail='Origin header is required',
-				headers={'Access-Control-Allow-Origin': '*'},
+				headers=self.cors_headers,
 			)
 			return
 
@@ -115,7 +116,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			self.abort(
 				code=403,
 				detail='urlfetch error: %s' % errorReason,
-				headers={'Access-Control-Allow-Origin': '*'},
+				headers=self.cors_headers,
 			)
 
 class OkHandler(webapp2.RequestHandler):
