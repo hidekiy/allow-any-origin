@@ -22,7 +22,6 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	quota_limits_refresh_interval = 60
 	quota_reset_interval = 0
 	quota_count_threshold = sys.maxint
-	cors_headers = {'Access-Control-Allow-Origin': '*'}
 
 	@classmethod
 	def _prepare_quota(cls):
@@ -44,6 +43,13 @@ class HttpProxyHandler(webapp2.RequestHandler):
 				cls.quota_count_threshold = quota_count
 				cls.quota_reset_interval = quota_reset_interval
 
+	def abort(self, *args, **kwargs):
+		super(HttpProxyHandler, self).abort(
+			headers={'Access-Control-Allow-Origin': '*'},
+			*args,
+			**kwargs
+		)
+
 	def _check_quota(self, key):
 		key_hash = hashlib.sha1(key).digest()
 		quota_count = self.quota_dict.get(key_hash, 0) + 1
@@ -55,8 +61,13 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			self.abort(
 				code=403,
 				detail='over internal quota',
-				headers=self.cors_headers,
 			)
+
+	def _abort_incorrect_client(self):
+		self.abort(
+			code=403,
+			detail='Please request via XmlHttpRequest Lv.2 API',
+		)
 
 	def get(self, url):
 		self._prepare_quota()
@@ -70,14 +81,16 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 		origin = self.request.headers.get('origin', '').lower();
 		logging.debug('origin %s', origin)
-
 		if not origin:
 			logging.warning('missing origin')
-			self.abort(
-				code=403,
-				detail='Origin header is required',
-				headers=self.cors_headers,
-			)
+			self._abort_incorrect_client();
+			return
+
+		user_agent = self.request.headers.get('user-agent', '')
+		logging.debug('user-agent %s', user_agent)
+		if not user_agent:
+			logging.warning('missing user-agent')
+			self._abort_incorrect_client();
 			return
 
 		self._check_quota(origin)
@@ -116,7 +129,6 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			self.abort(
 				code=403,
 				detail='urlfetch error: %s' % errorReason,
-				headers=self.cors_headers,
 			)
 
 class OkHandler(webapp2.RequestHandler):
