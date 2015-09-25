@@ -14,6 +14,7 @@ import webapp2
 
 class Quota(ndb.Model):
 	count = ndb.IntegerProperty()
+	bytes = ndb.IntegerProperty()
 	reset_interval = ndb.IntegerProperty()
 	default_id = 'default'
 
@@ -34,10 +35,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		if time() - cls.quota_refreshed_at > cls.quota_refresh_seconds:
 			cls.quota_refreshed_at = time()
 			quota = Quota.get_by_id(Quota.default_id);
-			if not quota:
-				return
-
-			logging.info('_refresh_quota %r', quota)
+			logging.info('_refresh_quota: %r', quota)
 			cls.quota = quota
 
 	def abort(self, *args, **kwargs):
@@ -47,21 +45,40 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			**kwargs
 		)
 
-	def _check_quota(self, quota_key):
-		key = 'quota:%s:%d' % (
-			hashlib.sha1(quota_key).digest(),
+	def _timed_hash_key(self, key):
+		return '%s:%d' % (
+			hashlib.sha1(key).digest(),
 			int(time()) / self.quota.reset_interval
 		)
-		count = memcache.incr(key, initial_value=0)
-		logging.info('_check_quota: count %d', count)
 
-		if self.quota:
-			if count >= self.quota.count:
-				logging.warning('over internal quota count %d', self.quota.count)
-				self.abort(
-					code=403,
-					detail='over internal quota',
-				)
+	def _abort_internal_quota(self):
+		self.abort(
+			code=403,
+			detail='over internal quota',
+		)
+	
+	def _check_quota_count(self, quota_key):
+		key = 'quota:count:%s' % self._timed_hash_key(quota_key)
+		count = memcache.incr(key, initial_value=0)
+		logging.info('_check_quota_count: %d', count)
+
+		if count >= self.quota.count:
+			logging.warning('over internal quota count (quota.count=%d)', self.quota.count)
+			self._abort_internal_quota()
+
+	def _check_quota_bytes(self, quota_key):
+		key = 'quota:bytes:%s' % self._timed_hash_key(quota_key)
+		bytes = memcache.get(key)
+		logging.info('_check_quota_bytes: %r', bytes)
+
+		if bytes is not None and bytes >= self.quota.bytes:
+			logging.warning('over internal quota bytes (quota.bytes=%d)', self.quota.bytes)
+			self._abort_internal_quota()
+
+	def _update_quota_bytes(self, quota_key, delta):
+		key = 'quota:bytes:%s' % self._timed_hash_key(quota_key)
+		bytes = memcache.incr(key, delta=delta, initial_value=0)
+		logging.info('_update_quota_bytes: %d', bytes)
 
 	def _abort_incorrect_client(self):
 		self.abort(
@@ -75,7 +92,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			return
 
 		user_agent = self.request.headers.get('user-agent', '')
-		logging.debug('user-agent %s', user_agent)
+		logging.info('user-agent %s', user_agent)
 		if not user_agent:
 			logging.warning('missing user-agent')
 			self._abort_incorrect_client();
@@ -85,12 +102,12 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		key = 'urlfetch:%s' % url
 		uresp = memcache.get(key)
 		if uresp is not None:
-			logging.debug('urlfetch cache hit')
+			logging.info('urlfetch cache hit')
 			return uresp
 	
 		res = None
 		try:
-			logging.debug('urlfetch cache miss')
+			logging.info('urlfetch cache miss')
 			res = urlfetch.fetch(url)
 
 		except (urlfetch.InvalidURLError,
@@ -117,14 +134,17 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		if self.request.query_string:
 			url += '?' + self.request.query_string
 
-		logging.debug('url %s', url)
-		logging.debug('referrer %s', self.request.headers.get('referer', ''))
+		logging.info('url %r', url)
+		logging.info('referrer %r', self.request.headers.get('referer'))
 		origin = self.request.headers.get('origin', '').lower();
-		logging.debug('origin %s', origin)
+		logging.info('origin %r', origin)
 
 		self._check_request(origin)
 		self._refresh_quota()
-		self._check_quota(origin)
+
+		if self.quota is not None:
+			self._check_quota_count(origin)
+			self._check_quota_bytes(origin)
 
 		uresp = self._urlfetch(url)
 		for key, val in uresp.headers.iteritems():
@@ -134,14 +154,16 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		self.response.headers.pop('set-cookie', None)
 
 		if uresp.status_code >= 500:
-			logging.info('override response code %d', uresp.status_code)
-
+			logging.info('override response status_code %d', uresp.status_code)
 			self.response.headers['x-original-status-code'] = str(uresp.status_code)
 			self.response.set_status(403)
+
 		else:
 			self.response.set_status(uresp.status_code)
 
-		self.response.write(uresp.content)
+		content = uresp.content
+		self._update_quota_bytes(origin, len(content))
+		self.response.write(content)
 
 class OkHandler(webapp2.RequestHandler):
 	def get(self):
@@ -155,6 +177,7 @@ class OkHandler(webapp2.RequestHandler):
 
 Quota.get_or_insert(Quota.default_id,
 	count=1000,
+	bytes=20*1024*1024,
 	reset_interval=3600
 )
 
