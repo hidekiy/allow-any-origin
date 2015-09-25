@@ -60,9 +60,9 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	def _check_quota_count(self, quota_key):
 		key = 'quota:count:%s' % self._timed_hash_key(quota_key)
 		count = memcache.incr(key, initial_value=0)
-		logging.info('_check_quota_count: %d', count)
+		logging.info('_check_quota_count: %r', count)
 
-		if count >= self.quota.count:
+		if count is not None and count >= self.quota.count:
 			logging.warning('over internal quota count (quota.count=%d)', self.quota.count)
 			self._abort_internal_quota()
 
@@ -78,7 +78,7 @@ class HttpProxyHandler(webapp2.RequestHandler):
 	def _update_quota_bytes(self, quota_key, delta):
 		key = 'quota:bytes:%s' % self._timed_hash_key(quota_key)
 		bytes = memcache.incr(key, delta=delta, initial_value=0)
-		logging.info('_update_quota_bytes: %d', bytes)
+		logging.info('_update_quota_bytes: %r', bytes)
 
 	def _abort_incorrect_client(self):
 		self.abort(
@@ -87,13 +87,11 @@ class HttpProxyHandler(webapp2.RequestHandler):
 		)
 	
 	def _check_request(self, origin):
-		if not origin:
-			logging.info('missing origin')
-			return
+		logging.info('referrer %r', self.request.headers.get('referer'))
 
-		user_agent = self.request.headers.get('user-agent', '')
-		logging.info('user-agent %s', user_agent)
-		if not user_agent:
+		user_agent = self.request.headers.get('user-agent')
+		logging.info('user-agent %r', user_agent)
+		if user_agent is None:
 			logging.warning('missing user-agent')
 			self._abort_incorrect_client();
 			return
@@ -135,7 +133,6 @@ class HttpProxyHandler(webapp2.RequestHandler):
 			url += '?' + self.request.query_string
 
 		logging.info('url %r', url)
-		logging.info('referrer %r', self.request.headers.get('referer'))
 		origin = self.request.headers.get('origin', '').lower();
 		logging.info('origin %r', origin)
 
