@@ -36,9 +36,13 @@
     <p>Request examples:<br>
         http://allow-any-origin.appspot.com/http://news.google.com/news?ned=us&amp;topic=h&amp;output=rss</p>
     <h2>Restrictions</h2>
-    <p>You can only request by GET method. Other methods like POST aren't implemented.</p>
-    <p>Response body size is up to 1MB.</p>
-    <p>Response timeout is around 30 seconds.</p>
+    <ul>
+        <li>Suddenly stop serving because of appengine free quota exceeding.</li>
+        <li>Available request method is GET only.</li>
+        <li>Response body size is up to 32MB.</li>
+        <li>Response timeout is around 30 seconds.</li>
+        <li>Respose is internally cached in 1 minute.</li>
+    </ul>
     <h2>Live Demo</h2>
     <form action="" onsubmit="xhrdemo.call(this); return false">
         <input type="text" value="http://www.google.com/"/>
@@ -50,17 +54,17 @@
     <p><a href="http://hidekiy.com/" rel="me">Hideki Yamamura (@hidekiy)</a></p>
     <p style="text-align:right"><a href="https://developers.google.com/appengine/"><img src="https://developers.google.com/appengine/images/appengine-noborder-120x30.gif" width="120" height="30" alt="powered by Google App Engine"/></a></p>
     <script>
-    function xhrdemo() {
-        var url = this.getElementsByTagName('input')[0].value,
-        req = window.XDomainRequest ? new XDomainRequest() : new XMLHttpRequest();
-
-        req.open('GET', 'http://demo.allow-any-origin.appspot.com/' + url, true);
-        req.onload = function () {
-            alert(req.responseText);
-            req = null;
+        'use strict';
+        function xhrdemo() {
+            var url = this.getElementsByTagName('input')[0].value,
+            req = this.XDomainRequest ? new XDomainRequest() : new XMLHttpRequest();
+            req.open('GET', '/' + url, true);
+            req.onload = function () {
+                alert(req.responseText);
+                req = null;
+            }
+            req.send(null);
         }
-        req.send(null);
-    }
     </script>
 </body>
 </html>
