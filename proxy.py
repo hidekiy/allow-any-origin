@@ -121,7 +121,8 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 		uresp = UrlResp(res)
 		try:
-			memcache.set(key, uresp, self.urlfetch_cache_seconds)
+			setResult = memcache.set(key, uresp, self.urlfetch_cache_seconds)
+			logging.info('memcache set: %s', setResult)
 
 		except ValueError, err:
 			logging.warning('memcache error: %r', err)
@@ -145,10 +146,11 @@ class HttpProxyHandler(webapp2.RequestHandler):
 
 		uresp = self._urlfetch(url)
 		for key, val in uresp.headers.iteritems():
+			if key.lower() == 'set-cookie':
+				continue
 			self.response.headers[key] = val
 
 		self.response.headers['access-control-allow-origin'] = '*'
-		self.response.headers.pop('set-cookie', None)
 
 		if uresp.status_code >= 500:
 			logging.info('override response status_code %d', uresp.status_code)
