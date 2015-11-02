@@ -180,7 +180,7 @@ Quota.get_or_insert(Quota.default_id,
 	reset_interval=3600
 )
 
-application = webapp2.WSGIApplication([
+app = webapp2.WSGIApplication([
 	(r'/(https?://.*)', HttpProxyHandler),
 	(r'/ok', OkHandler),
 ], debug=True)

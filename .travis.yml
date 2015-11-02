@@ -1,0 +1,10 @@
+sudo: false
+language: python
+python:
+  - 2.7
+install:
+  - wget -O google_appengine.zip https://storage.googleapis.com/appengine-sdks/featured/google_appengine_1.9.28.zip
+  - unzip -q google_appengine.zip
+  - pip install NoseGAE
+script:
+  - nosetests --with-gae --gae-lib-root google_appengine

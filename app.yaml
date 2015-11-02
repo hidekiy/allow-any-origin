@@ -20,4 +20,4 @@ handlers:
   upload: static/index\.html
 
 - url: /.*
-  script: proxy.application
+  script: main.app
