@@ -176,8 +176,8 @@ class OkHandler(webapp2.RequestHandler):
 
 Quota.get_or_insert(Quota.default_id,
 	count=1000,
-	bytes=20*1024*1024,
-	reset_interval=3600
+	bytes=10*1024*1024,
+	reset_interval=2*3600
 )
 
 app = webapp2.WSGIApplication([
