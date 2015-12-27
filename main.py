@@ -176,7 +176,7 @@ class OkHandler(webapp2.RequestHandler):
 
 Quota.get_or_insert(Quota.default_id,
 	count=1000,
-	bytes=10*1024*1024,
+	bytes=5*1024*1024,
 	reset_interval=2*3600
 )
 
