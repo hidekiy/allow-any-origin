@@ -1,9 +1,8 @@
 language: python
 python:
 - 2.7
-before_install:
-- echo "${GCLOUD_SERVICE_ACCOUNT_KEY}" > $HOME/service-account.json
 install:
+- echo "${GCLOUD_SERVICE_ACCOUNT_KEY}" > $TRAVIS_BUILD_DIR/service-account.json
 - wget -O $HOME/google_appengine.zip https://storage.googleapis.com/appengine-sdks/featured/google_appengine_1.9.28.zip
 - unzip -q $HOME/google_appengine.zip -d $HOME
 - pip install NoseGAE
